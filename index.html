@@ -3,176 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ponto Eletrônico - RV Sistemas</title>
+    <title>Ponto Eletrônico - RV Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
 
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center">
-        <h1 class="text-2xl font-bold mb-2 text-blue-800">Bater Ponto</h1>
-        <p id="nome-obra" class="text-gray-500 mb-6 italic">Carregando dados da obra...</p>
+    <div id="tela-registro" class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md text-center border-t-4 border-blue-600 transition-all">
+        <img src="https://i.postimg.cc/PqdgXGF0/logo-rv-negociospng.png" alt="RV Portal" class="h-16 mx-auto mb-4">
+        <h1 class="text-xl font-bold mb-2 text-slate-800 uppercase">Registro de Ponto</h1>
+        <p id="nome-obra" class="text-slate-500 mb-6 text-sm font-bold bg-slate-100 p-2 rounded">📍 Carregando localização da obra...</p>
 
-        <div id="gps-status" class="mb-6 p-4 rounded bg-blue-100 text-blue-800 text-sm">
-            Consultando localização oficial...
+        <div id="gps-status" class="mb-6 p-3 rounded-lg bg-blue-50 text-blue-800 text-sm font-bold flex items-center justify-center gap-2 border border-blue-200">
+            <i data-lucide="map-pin" class="w-4 h-4 animate-bounce"></i> Validando perímetro GPS (100m)...
         </div>
 
-        <div class="mb-4 text-left">
-            <label class="block text-gray-700 font-bold mb-2">Selecione seu nome:</label>
-            <select id="funcionario-select" class="w-full p-3 border rounded shadow-sm">
-                <option value="">Carregando equipe...</option>
-            </select>
+        <div class="mb-6 text-left">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Digite o seu ID (Matrícula):</label>
+            <input type="number" id="funcionario-id" placeholder="Ex: 105" class="w-full p-4 border-2 border-slate-200 rounded-lg shadow-sm text-center text-xl font-bold outline-none focus:border-blue-600 transition-colors">
         </div>
 
-        <div class="flex gap-4 mb-6">
-            <button id="btn-entrada" disabled class="flex-1 bg-green-500 text-white font-bold py-3 px-4 rounded opacity-50 cursor-not-allowed">
-                ENTRADA
-            </button>
-            <button id="btn-saida" disabled class="flex-1 bg-red-500 text-white font-bold py-3 px-4 rounded opacity-50 cursor-not-allowed">
-                SAÍDA
-            </button>
-        </div>
+        <button id="btn-registrar" onclick="registrarPonto()" disabled class="w-full p-4 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-900 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg shadow-lg">
+            <i data-lucide="fingerprint" class="w-6 h-6"></i> REGISTRAR PONTO AGORA
+        </button>
+    </div>
 
-        <button onclick="toggleSupervisor()" class="text-xs text-gray-400 underline mt-4">Acesso Supervisor</button>
+    <div id="tela-sucesso" class="hidden bg-emerald-600 p-8 rounded-xl shadow-2xl w-full max-w-md text-center text-white transition-all">
+        <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <i data-lucide="check-circle" class="w-16 h-16 text-emerald-600"></i>
+        </div>
+        <h1 class="text-3xl font-black mb-2 uppercase">Ponto Registrado!</h1>
+        <p class="text-emerald-100 mb-6 text-sm">Aguardando validação do encarregado.</p>
         
-        <div id="area-supervisor" class="hidden mt-6 p-4 border-t border-gray-200">
-            <input type="password" id="senha-supervisor" placeholder="Senha" class="w-full p-2 border rounded mb-2">
-            <button onclick="liberarManual()" class="w-full bg-gray-700 text-white p-2 rounded text-sm">Liberar Sem GPS</button>
+        <div class="bg-emerald-800/50 p-4 rounded-lg mb-8 backdrop-blur-sm border border-emerald-500/30">
+            <p class="text-sm font-bold text-emerald-200 uppercase mb-1">Horário Oficial do Registro</p>
+            <p id="hora-sucesso" class="text-4xl font-black tabular-nums tracking-wider"></p>
+            <p id="data-sucesso" class="text-sm font-bold text-emerald-200 mt-1"></p>
+            <p id="id-sucesso" class="text-sm font-bold text-white mt-4 pt-4 border-t border-emerald-500/30"></p>
+        </div>
+
+        <div class="animate-pulse flex flex-col items-center justify-center gap-2">
+            <i data-lucide="camera" class="w-6 h-6"></i>
+            <p class="font-bold uppercase text-sm">Este é o seu comprovante.<br>Tire um print desta tela agora!</p>
         </div>
     </div>
 
     <script>
-        // CONFIGURAÇÕES DO SUPABASE
+        lucide.createIcons();
+
+        // COLOQUE SUAS CHAVES AQUI
         const SUPABASE_URL = 'https://lyieiqhkspbowsrlngvn.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_B2a4vA22qf4XGcrxPDRAaw_13rW51uI';
-        
-        // CORREÇÃO: Usando nome diferente para o cliente para evitar conflito com a lib global
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const urlParams = new URLSearchParams(window.location.search);
-        const obraId = urlParams.get('obra_id');
-        
-        let obraLatOficial = null;
-        let obraLngOficial = null;
-        let userLat = null;
-        let userLng = null;
+        const obraId = urlParams.get('obraId');
+        const obraLat = parseFloat(urlParams.get('lat'));
+        const obraLng = parseFloat(urlParams.get('lng'));
 
-        if (!obraId) {
-            document.getElementById('gps-status').innerText = "❌ Erro: ID da obra não encontrado no QR Code.";
-            document.getElementById('gps-status').className = "mb-6 p-4 rounded bg-red-100 text-red-800 text-sm";
+        let userLat = null, userLng = null;
+
+        if(!obraId || isNaN(obraLat) || isNaN(obraLng)) {
+            document.getElementById('gps-status').innerHTML = "❌ QR Code inválido. Faltam parâmetros da obra.";
+            document.getElementById('gps-status').className = "mb-6 p-4 rounded-lg bg-red-100 text-red-800 text-sm font-bold";
         } else {
-            inicializarSistema();
+            document.getElementById('nome-obra').innerText = "📍 Obra ID: " + obraId;
+            iniciarGPS();
         }
 
-        async function inicializarSistema() {
-            try {
-                // 1. Busca a localização da obra no Supabase
-                const { data: obra, error: errorObra } = await supabaseClient
-                    .from('jsp_obras')
-                    .select('nome, lat, lng')
-                    .eq('id', obraId)
-                    .single();
-
-                if (errorObra || !obra) throw new Error("Obra não cadastrada no banco.");
-
-                document.getElementById('nome-obra').innerText = obra.nome;
-                obraLatOficial = parseFloat(obra.lat);
-                obraLngOficial = parseFloat(obra.lng);
-
-                // 2. Carrega os funcionários
-                carregarEquipe();
-
-                // 3. Pega o GPS do celular e compara
-                pegarLocalizacaoUsuario();
-
-            } catch (err) {
-                document.getElementById('gps-status').innerText = "❌ " + err.message;
-                document.getElementById('gps-status').className = "mb-6 p-4 rounded bg-red-100 text-red-800 text-sm";
-            }
-        }
-
-        async function carregarEquipe() {
-            const { data, error } = await supabaseClient.from('jsp_equipe').select('id, nome');
-            const select = document.getElementById('funcionario-select');
-            select.innerHTML = '<option value="">Selecione seu nome...</option>';
-            if (data) {
-                data.forEach(f => {
-                    const opt = document.createElement('option');
-                    opt.value = f.id;
-                    opt.text = f.nome;
-                    select.appendChild(opt);
-                });
-            }
-        }
-
-        function pegarLocalizacaoUsuario() {
+        function iniciarGPS() {
             if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                    userLat = pos.coords.latitude;
-                    userLng = pos.coords.longitude;
-                    validarDistancia();
-                }, (err) => {
-                    document.getElementById('gps-status').innerText = "❌ GPS Desativado. Ative para bater o ponto.";
-                    document.getElementById('gps-status').className = "mb-6 p-4 rounded bg-red-100 text-red-800 text-sm";
-                }, { enableHighAccuracy: true });
-            }
-        }
-
-        function validarDistancia() {
-            const R = 6371e3; // Raio da Terra em metros
-            const φ1 = userLat * Math.PI/180;
-            const φ2 = obraLatOficial * Math.PI/180;
-            const Δφ = (obraLatOficial-userLat) * Math.PI/180;
-            const Δλ = (obraLngOficial-userLng) * Math.PI/180;
-
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            const distancia = R * c;
-
-            const statusDiv = document.getElementById('gps-status');
-            if (distancia <= 50) {
-                statusDiv.innerHTML = `✅ Localização Confirmada! (${Math.round(distancia)}m)`;
-                statusDiv.className = "mb-6 p-4 rounded bg-green-100 text-green-800 text-sm";
-                document.getElementById('btn-entrada').disabled = false;
-                document.getElementById('btn-entrada').classList.remove('opacity-50');
-                document.getElementById('btn-saida').disabled = false;
-                document.getElementById('btn-saida').classList.remove('opacity-50');
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLat = position.coords.latitude;
+                        userLng = position.coords.longitude;
+                        verificarDistancia(userLat, userLng, obraLat, obraLng);
+                    },
+                    (error) => {
+                        document.getElementById('gps-status').innerHTML = "❌ Ative a localização (GPS) do seu celular e recarregue a página.";
+                        document.getElementById('gps-status').className = "mb-6 p-4 rounded-lg bg-red-100 text-red-800 text-sm font-bold";
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
             } else {
-                statusDiv.innerHTML = `❌ Você está fora da obra. (${Math.round(distancia)}m de distância).`;
-                statusDiv.className = "mb-6 p-4 rounded bg-red-100 text-red-800 text-sm";
+                alert("Seu navegador não suporta GPS.");
             }
         }
 
-        async function registrarPonto(tipo) {
-            const funcId = document.getElementById('funcionario-select').value;
-            if(!funcId) return alert("Selecione seu nome!");
+        function verificarDistancia(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Raio da Terra em km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distancia = R * c; // Distância em km
 
+            // Distância aumentada para 100 metros (0.1 km)
+            if (distancia > 0.1) {
+                document.getElementById('gps-status').innerHTML = `❌ Você está a ${(distancia*1000).toFixed(0)}m da obra. Aproxime-se para bater o ponto (Máx: 100m).`;
+                document.getElementById('gps-status').className = "mb-6 p-4 rounded-lg bg-red-100 text-red-800 text-sm font-bold border border-red-200";
+            } else {
+                document.getElementById('gps-status').innerHTML = "✅ GPS Validado. Você está na obra!";
+                document.getElementById('gps-status').className = "mb-6 p-4 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-bold border border-emerald-200";
+                document.getElementById('btn-registrar').disabled = false;
+            }
+        }
+
+        async function registrarPonto() {
+            const funcId = document.getElementById('funcionario-id').value;
+            if(!funcId) return alert("Por favor, digite o seu ID!");
+
+            document.getElementById('btn-registrar').innerHTML = '<i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> REGISTRANDO...';
+            document.getElementById('btn-registrar').disabled = true;
+
+            const dataAtual = new Date();
+            const horaExata = dataAtual.toLocaleTimeString('pt-BR', { hour12: false });
+            const dataExata = dataAtual.toLocaleDateString('pt-BR');
+            const dataIsoString = dataAtual.toISOString();
+
+            // Salva no banco como PENDENTE
             const { error } = await supabaseClient.from('jsp_ponto_diario').insert([{
                 funcionario_id: funcId,
                 obra_id: obraId,
-                tipo: tipo,
+                status_ponto: 'PENDENTE', // Status pendente para o encarregado validar
+                tipo: 'A DEFINIR', // Encarregado define se é Entrada ou Saída
+                hora_registro: dataIsoString,
                 lat_registro: userLat.toString(),
                 lng_registro: userLng.toString()
             }]);
 
-            if (error) alert("Erro: " + error.message);
-            else alert("Ponto de " + tipo + " registrado!");
-        }
-
-        document.getElementById('btn-entrada').onclick = () => registrarPonto('ENTRADA');
-        document.getElementById('btn-saida').onclick = () => registrarPonto('SAIDA');
-
-        function toggleSupervisor() { document.getElementById('area-supervisor').classList.toggle('hidden'); }
-        
-        function liberarManual() {
-            if(document.getElementById('senha-supervisor').value === '123456') {
-                document.getElementById('btn-entrada').disabled = false;
-                document.getElementById('btn-entrada').classList.remove('opacity-50');
-                document.getElementById('btn-saida').disabled = false;
-                document.getElementById('btn-saida').classList.remove('opacity-50');
-                document.getElementById('gps-status').innerText = "🔓 Liberado manualmente pelo supervisor.";
+            if (error) {
+                alert("Erro ao registrar: " + error.message);
+                document.getElementById('btn-registrar').innerHTML = '<i data-lucide="fingerprint" class="w-6 h-6"></i> REGISTRAR PONTO AGORA';
+                document.getElementById('btn-registrar').disabled = false;
+            } else {
+                // Preenche os dados da tela de sucesso
+                document.getElementById('hora-sucesso').innerText = horaExata;
+                document.getElementById('data-sucesso').innerText = dataExata;
+                document.getElementById('id-sucesso').innerText = "ID FUNCIONÁRIO: " + funcId;
+                
+                // Esconde registro, mostra sucesso
+                document.getElementById('tela-registro').classList.add('hidden');
+                document.getElementById('tela-sucesso').classList.remove('hidden');
+                lucide.createIcons();
             }
         }
     </script>
