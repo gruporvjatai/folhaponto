@@ -22,10 +22,8 @@
             </div>
 
             <div class="mb-6 text-left">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Selecione seu nome:</label>
-                <select id="funcionario-select" class="w-full p-4 border-2 border-slate-200 rounded-lg shadow-sm text-lg font-bold text-slate-700 outline-none focus:border-blue-600 transition-colors appearance-none bg-slate-50">
-                    <option value="">Carregando equipe...</option>
-                </select>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Sua Matrícula (ID):</label>
+                <input type="number" id="funcionario-matricula" placeholder="Ex: 100" class="w-full p-4 border-2 border-slate-200 rounded-lg shadow-sm text-center text-2xl font-black outline-none focus:border-blue-600 transition-colors bg-slate-50 tracking-widest">
             </div>
 
             <button id="btn-registrar" onclick="registrarPontoPendente()" disabled class="w-full p-4 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-900 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-lg shadow-lg">
@@ -134,22 +132,19 @@
     <script>
         lucide.createIcons();
 
-        // CONFIGURAÇÕES DO SUPABASE (Sua chave original)
         const SUPABASE_URL = 'https://lyieiqhkspbowsrlngvn.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_B2a4vA22qf4XGcrxPDRAaw_13rW51uI';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // VARIÁVEIS GLOBAIS
         const urlParams = new URLSearchParams(window.location.search);
-        const obraId = urlParams.get('obra_id'); // Lógica original preservada!
+        const obraId = urlParams.get('obra_id'); 
         
         let obraLatOficial = null;
         let obraLngOficial = null;
         let userLat = null;
         let userLng = null;
-        let equipeGlobal = []; // Guarda a equipe para usar nos dropdowns
+        let equipeGlobal = []; 
 
-        // 1. INICIALIZAÇÃO
         if (!obraId) {
             document.getElementById('gps-status').innerHTML = '<i data-lucide="alert-circle" class="w-5 h-5"></i> ❌ Erro: ID da obra não encontrado no QR Code.';
             document.getElementById('gps-status').className = "mb-6 p-4 rounded-lg bg-red-100 text-red-800 text-sm font-bold flex items-center gap-2";
@@ -160,7 +155,6 @@
 
         async function inicializarSistema() {
             try {
-                // Busca a obra e coordenadas do seu banco
                 const { data: obra, error: errorObra } = await supabaseClient
                     .from('jsp_obras')
                     .select('nome, lat, lng')
@@ -183,25 +177,22 @@
             }
         }
 
-        // 2. CARREGA OS FUNCIONÁRIOS DO SEU BANCO
+        // AGORA PUXA A MATRÍCULA DO BANCO TAMBÉM
         async function carregarEquipe() {
-            const { data, error } = await supabaseClient.from('jsp_equipe').select('id, nome').order('nome');
-            const selectFunc = document.getElementById('funcionario-select');
+            const { data, error } = await supabaseClient.from('jsp_equipe').select('id, nome, matricula').order('nome');
             const selectManual = document.getElementById('manual-funcionario');
             
-            selectFunc.innerHTML = '<option value="" disabled selected>Clique para selecionar seu nome...</option>';
             selectManual.innerHTML = '';
 
             if (data) {
-                equipeGlobal = data; // Salva para o encarregado
+                equipeGlobal = data; 
                 data.forEach(f => {
-                    selectFunc.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
-                    selectManual.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
+                    // Preenche o dropdown do Encarregado (com ID aparente pra ajudar)
+                    selectManual.innerHTML += `<option value="${f.id}">${f.nome} (ID: ${f.matricula})</option>`;
                 });
             }
         }
 
-        // 3. VALIDAÇÃO GPS (Aumentado para 100m)
         function pegarLocalizacaoUsuario() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition((pos) => {
@@ -217,7 +208,7 @@
         }
 
         function validarDistancia() {
-            const R = 6371e3; // Raio em metros
+            const R = 6371e3; 
             const φ1 = userLat * Math.PI/180;
             const φ2 = obraLatOficial * Math.PI/180;
             const Δφ = (obraLatOficial-userLat) * Math.PI/180;
@@ -229,7 +220,6 @@
 
             const statusDiv = document.getElementById('gps-status');
 
-            // MUDANÇA: Aceita até 100 metros
             if (distancia <= 100) { 
                 statusDiv.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5"></i> ✅ Localização Confirmada! (${Math.round(distancia)}m)`;
                 statusDiv.className = "mb-6 p-4 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-bold flex items-center justify-center gap-2 border border-emerald-200";
@@ -241,13 +231,20 @@
             lucide.createIcons();
         }
 
-        // 4. REGISTRO PELO FUNCIONÁRIO (CAI COMO PENDENTE)
+        // REGISTRO USANDO A MATRÍCULA
         async function registrarPontoPendente() {
-            const selectEl = document.getElementById('funcionario-select');
-            const funcId = selectEl.value;
-            const nomeFunc = selectEl.options[selectEl.selectedIndex].text;
+            const inputDigitado = document.getElementById('funcionario-matricula').value;
+            
+            if(!inputDigitado) {
+                return alert("Por favor, digite sua matrícula!");
+            }
 
-            if(!funcId) return alert("Selecione seu nome na lista primeiro!");
+            // Procura o funcionário na equipe que tem essa matrícula
+            const funcionario = equipeGlobal.find(e => e.matricula == inputDigitado);
+
+            if(!funcionario) {
+                return alert("Matrícula não encontrada! Verifique se você digitou corretamente.");
+            }
 
             const btn = document.getElementById('btn-registrar');
             btn.innerHTML = '<i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i> REGISTRANDO...';
@@ -258,31 +255,32 @@
             const horaExata = dataAtual.toLocaleTimeString('pt-BR', { hour12: false });
             const dataExata = dataAtual.toLocaleDateString('pt-BR');
 
-            // Salva no banco (Requer que a tabela tenha status e hora_registro)
+            // Salva no banco usando o ID real (uuid/serial) para manter relação com as outras tabelas
             const { error } = await supabaseClient.from('jsp_ponto_diario').insert([{
-                funcionario_id: funcId,
+                funcionario_id: funcionario.id,
                 obra_id: obraId,
-                tipo: 'PENDENTE',       // Fica aguardando o encarregado decidir ENTRADA/SAIDA
-                status: 'PENDENTE',     // Nova coluna obrigatória
-                hora_registro: dataAtual.toISOString(), // Nova coluna obrigatória
+                tipo: 'PENDENTE',       
+                status: 'PENDENTE',     
+                hora_registro: dataAtual.toISOString(), 
                 lat_registro: userLat ? userLat.toString() : '',
                 lng_registro: userLng ? userLng.toString() : ''
             }]);
 
             if (error) {
-                alert("Erro: " + error.message);
+                alert("Erro ao conectar com o servidor: " + error.message);
                 btn.innerHTML = '<i data-lucide="fingerprint" class="w-6 h-6"></i> REGISTRAR PONTO';
                 btn.disabled = false;
                 lucide.createIcons();
             } else {
-                // Mostra a tela bonita de Print
                 document.getElementById('hora-sucesso').innerText = horaExata;
                 document.getElementById('data-sucesso').innerText = dataExata;
-                document.getElementById('nome-sucesso').innerText = nomeFunc;
+                
+                // Exibe o Nome e a Matrícula na tela de sucesso
+                document.getElementById('nome-sucesso').innerText = `${funcionario.nome} (ID: ${funcionario.matricula})`;
                 
                 document.getElementById('tela-registro').classList.add('hidden');
                 document.getElementById('tela-sucesso').classList.remove('hidden');
-                selectEl.value = ''; // Limpa pra próxima pessoa
+                document.getElementById('funcionario-matricula').value = ''; 
             }
         }
 
@@ -319,7 +317,6 @@
             }
         }
 
-        // Carrega da tabela quem bateu ponto e está com status PENDENTE
         async function carregarPendentes() {
             const tbody = document.getElementById('lista-pendentes');
             tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-sm font-bold animate-pulse text-blue-600">Buscando pendentes...</td></tr>';
@@ -338,11 +335,10 @@
 
             tbody.innerHTML = '';
             data.forEach(p => {
-                // Descobre o nome do cara cruzando o ID com a equipe Global carregada no início
                 const func = equipeGlobal.find(e => e.id == p.funcionario_id);
-                const nomeDisplay = func ? func.nome : `ID #${p.funcionario_id}`;
+                // Encarregado vê a matrícula também para confirmar
+                const nomeDisplay = func ? `${func.nome} (#${func.matricula})` : `ID Desconhecido`;
 
-                // Transforma o ISO no banco para HH:MM no input
                 const dataObj = new Date(p.hora_registro);
                 const horaFormatada = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -368,12 +364,10 @@
             lucide.createIcons();
         }
 
-        // O encarregado valida (Atualiza Tipo e Status)
         async function validar(pontoId, horaOriginal) {
             const tipo = document.getElementById(`tipo-edit-${pontoId}`).value;
             const horaEditada = document.getElementById(`hora-edit-${pontoId}`).value;
 
-            // Arruma a data caso o encarregado tenha editado o campo de input "time"
             let dataSalvar = new Date(horaOriginal);
             const [h, m] = horaEditada.split(':');
             dataSalvar.setHours(h, m, 0);
@@ -388,14 +382,12 @@
             else carregarPendentes();
         }
 
-        // O encarregado exclui se o cara bateu errado
         async function recusar(pontoId) {
             if(!confirm("Tem certeza que deseja apagar este registro permanentemente?")) return;
             await supabaseClient.from('jsp_ponto_diario').delete().eq('id', pontoId);
             carregarPendentes();
         }
 
-        // Lançamento manual (Caso o peão não tenha celular)
         function abrirModalManual() {
             document.getElementById('modal-manual').classList.remove('hidden');
             const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -421,7 +413,7 @@
                 funcionario_id: fId,
                 obra_id: obraId,
                 tipo: tipo,
-                status: 'VALIDADO', // Manual já entra validado
+                status: 'VALIDADO',
                 hora_registro: dataManual.toISOString(),
                 lat_registro: 'MANUAL',
                 lng_registro: 'MANUAL'
