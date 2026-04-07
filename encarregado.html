@@ -46,7 +46,7 @@
                     </div>
 
                     <button id="btn-gerar-qr" onclick="gerarQrCodeDoDia()" class="w-full mt-2 p-3 bg-blue-600 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition">
-                        <i data-lucide="qr-code" class="w-5 h-5"></i> Gerar/Atualizar QR Code de Hoje
+                        <i data-lucide="qr-code" class="w-5 h-5"></i> Gerar QR Code de Ponto
                     </button>
                 </div>
             </div>
@@ -292,7 +292,7 @@
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gerando Relatório...';
             lucide.createIcons();
 
-            // 1. Busca todos os registros da obra
+            // 1. Busca todos os registros da obra (Crescente, para mostrar Entrada antes de Saída)
             const { data, error } = await supabaseClient.from('jsp_ponto_diario')
                 .select('*')
                 .eq('obra_id', obraAtualId)
@@ -304,11 +304,16 @@
                 return;
             }
 
-            // 2. Filtra somente os que foram batidos HOJE
-            const dataHojeBr = new Date().toLocaleDateString('pt-BR');
+            // 2. FILTRA OS DE HOJE (Cortando o texto direto, sem matemática de fuso horário)
+            // Pega a data de hoje cravada no relógio do celular: YYYY-MM-DD
+            const hojeLocal = new Date();
+            const fusoOffset = hojeLocal.getTimezoneOffset() * 60000;
+            const hojeIsoStr = new Date(hojeLocal.getTime() - fusoOffset).toISOString().slice(0, 10);
+            const dataHojeBr = hojeLocal.toLocaleDateString('pt-BR');
+
             const registrosHoje = data.filter(p => {
-                const dataPonto = new Date(p.hora_registro).toLocaleDateString('pt-BR');
-                return dataPonto === dataHojeBr;
+                // p.hora_registro vem do banco como "2026-04-07T14:30:00..."
+                return p.hora_registro.startsWith(hojeIsoStr);
             });
 
             if (registrosHoje.length === 0) {
@@ -317,31 +322,48 @@
                 return;
             }
 
-            // 3. Monta a mensagem formatada para o WhatsApp
+            // 3. AGRUPA POR FUNCIONÁRIO
+            let pontosAgrupados = {};
+            registrosHoje.forEach(p => {
+                if (!pontosAgrupados[p.funcionario_id]) {
+                    pontosAgrupados[p.funcionario_id] = [];
+                }
+                pontosAgrupados[p.funcionario_id].push(p);
+            });
+
+            // 4. MONTA A MENSAGEM FORMATADA PARA O WHATSAPP
             const nomeObra = document.getElementById('nome-obra-titulo').innerText;
             
             let mensagem = `📋 *RELATÓRIO DE PONTO DIÁRIO*\n`;
             mensagem += `📍 *Obra:* ${nomeObra}\n`;
             mensagem += `📅 *Data:* ${dataHojeBr}\n\n`;
 
-            registrosHoje.forEach(p => {
-                const func = equipeGlobal.find(e => e.id == p.funcionario_id);
-                // Pega só o primeiro nome e sobrenome pra não ficar gigante
-                const nomeCurto = func ? func.nome.split(' ').slice(0, 2).join(' ') : `ID ${p.funcionario_id}`; 
+            // Percorre cada funcionário agrupado
+            Object.keys(pontosAgrupados).forEach(fId => {
+                const func = equipeGlobal.find(e => e.id == fId);
+                // Pega só o PRIMEIRO nome pra economizar espaço
+                const nomeCurto = func ? func.nome.split(' ')[0] : `ID ${fId}`; 
                 
-                const horaF = new Date(p.hora_registro).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                mensagem += `👷 *${nomeCurto}*\n`; // Nome em negrito
                 
-                let iconeStatus = p.status === 'VALIDADO' ? '✅' : '⏳';
-                let iconeTipo = p.tipo === 'ENTRADA' ? '📥' : '📤';
-                let txtTipo = p.tipo === 'ENTRADA' ? 'Entrada' : 'Saída';
+                // Lista os horários dessa pessoa
+                pontosAgrupados[fId].forEach(p => {
+                    // CORREÇÃO DO HORÁRIO: Corta exatamente a string HH:mm (Ex: "2026-04-07T14:30:00" vira "14:30")
+                    const horaExata = p.hora_registro.split('T')[1].substring(0, 5); 
+                    
+                    let iconeStatus = p.status === 'VALIDADO' ? '✅' : '⏳';
+                    let iconeTipo = p.tipo === 'ENTRADA' ? '📥' : '📤';
+                    let txtTipo = p.tipo === 'ENTRADA' ? 'Entrada' : 'Saída';
+                    
+                    mensagem += `  ${iconeStatus} ${iconeTipo} ${horaExata} - ${txtTipo}\n`;
+                });
                 
-                mensagem += `${iconeStatus} ${iconeTipo} *${nomeCurto}*\n`;
-                mensagem += `      🕒 ${horaF} - ${txtTipo}\n\n`;
+                mensagem += `\n`; // Espaço entre um funcionário e outro
             });
 
             mensagem += `_Gerado por RV Sistemas_`;
 
-            // 4. Abre o link do WhatsApp
+            // 5. ABRE O WHATSAPP
             const urlFormatada = encodeURIComponent(mensagem);
             window.open(`https://api.whatsapp.com/send?text=${urlFormatada}`, '_blank');
 
