@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Encarregado - RV Sistemas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="w-full max-w-xl bg-white p-6 rounded-xl shadow-2xl transition-all">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="shield-check" class="text-blue-600"></i> Painel do Encarregado
+            </h2>
+            <img src="https://i.postimg.cc/PqdgXGF0/logo-rv-negociospng.png" alt="RV" class="h-8">
+        </div>
+
+        <div id="login-supervisor" class="max-w-xs mx-auto text-center py-8">
+            <i data-lucide="lock" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+            <p class="text-sm font-bold text-slate-600 mb-2">Digite a senha para acessar:</p>
+            <input type="password" id="senha-supervisor" placeholder="Senha" class="w-full p-3 border-2 rounded-lg mb-3 text-center font-bold outline-none focus:border-blue-500">
+            <button onclick="loginSupervisor()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700">Entrar</button>
+        </div>
+
+        <div id="selecao-obra" class="hidden text-center py-4">
+            <p class="text-sm font-bold text-slate-600 mb-2 uppercase">Selecione a Obra de Hoje:</p>
+            <select id="select-obra" class="w-full p-4 border-2 rounded-lg mb-4 text-center font-bold outline-none focus:border-blue-500 bg-slate-50 text-lg"></select>
+            <button onclick="acessarObra()" class="w-full bg-indigo-600 text-white p-4 rounded-lg font-bold hover:bg-indigo-700 shadow-lg text-lg flex items-center justify-center gap-2">
+                <i data-lucide="arrow-right-circle"></i> Gerenciar esta Obra
+            </button>
+        </div>
+
+        <div id="painel-supervisor" class="hidden">
+            <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl mb-6 text-center">
+                <h3 id="nome-obra-titulo" class="font-black text-indigo-800 text-lg mb-2">OBRA...</h3>
+                
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                    <p class="text-xs font-bold text-slate-500 uppercase mb-2">QR Code de Hoje para os Funcionários</p>
+                    
+                    <div id="area-qr-code" class="hidden flex-col items-center justify-center py-4">
+                        <img id="img-qr-code" src="" alt="QR Code Ponto" class="w-48 h-48 border-4 border-white shadow-md rounded-lg">
+                        <p class="text-[10px] text-slate-400 mt-2">Aponte a câmera para bater o ponto</p>
+                    </div>
+
+                    <button id="btn-gerar-qr" onclick="gerarQrCodeDoDia()" class="w-full mt-2 p-3 bg-blue-600 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition">
+                        <i data-lucide="qr-code" class="w-5 h-5"></i> Gerar/Atualizar QR Code de Hoje
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 p-4 rounded-lg mb-4 flex justify-between items-center">
+                <p class="text-xs font-bold text-slate-500 uppercase">Registros Pendentes</p>
+                <button onclick="carregarPendentes()" class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-bold"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Atualizar</button>
+            </div>
+
+            <div class="overflow-x-auto border rounded-lg shadow-sm mb-6">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-800 text-white">
+                        <tr>
+                            <th class="p-3 font-bold">Colaborador</th>
+                            <th class="p-3 font-bold text-center">Hora</th>
+                            <th class="p-3 font-bold text-center">Tipo</th>
+                            <th class="p-3 font-bold text-center">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-pendentes" class="divide-y text-slate-700 bg-white"></tbody>
+                </table>
+            </div>
+            
+            <button onclick="abrirModalManual()" class="p-3 bg-slate-800 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-900 w-full transition shadow-lg">
+                <i data-lucide="edit" class="w-4 h-4"></i> Lançar Ponto Manual (Sem Celular)
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-manual" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <h3 class="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2"><i data-lucide="clock" class="text-blue-600"></i> Ponto Manual</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Funcionário</label>
+                    <select id="manual-funcionario" class="w-full p-3 border rounded-lg outline-none bg-slate-50 font-bold text-slate-700"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Hora Exata</label>
+                    <input type="time" id="manual-hora" class="w-full p-3 border rounded-lg outline-none font-bold text-slate-700 text-center">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Movimento</label>
+                    <select id="manual-tipo" class="w-full p-3 border rounded-lg outline-none font-bold text-slate-700">
+                        <option value="ENTRADA">Entrada</option>
+                        <option value="SAIDA">Saída</option>
+                    </select>
+                </div>
+                <div class="pt-2">
+                    <button onclick="salvarPontoManual()" class="w-full p-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 mb-2">Salvar Definitivo</button>
+                    <button onclick="fecharModalManual()" class="w-full p-3 bg-slate-200 text-slate-700 rounded-lg font-bold">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const SUPABASE_URL = 'https://lyieiqhkspbowsrlngvn.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_B2a4vA22qf4XGcrxPDRAaw_13rW51uI';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let obraAtualId = null;
+        let equipeGlobal = [];
+
+        function loginSupervisor() {
+            if(document.getElementById('senha-supervisor').value === '123456') {
+                document.getElementById('login-supervisor').classList.add('hidden');
+                document.getElementById('selecao-obra').classList.remove('hidden');
+                carregarObras();
+            } else { alert("Senha Incorreta!"); }
+        }
+
+        async function carregarObras() {
+            const { data, error } = await supabaseClient.from('jsp_obras').select('id, nome').order('nome');
+            const sel = document.getElementById('select-obra');
+            sel.innerHTML = '<option value="">-- Selecione --</option>';
+            if(data) data.forEach(o => sel.innerHTML += `<option value="${o.id}">${o.nome}</option>`);
+        }
+
+        async function acessarObra() {
+            const sel = document.getElementById('select-obra');
+            if(!sel.value) return alert("Selecione a obra!");
+            obraAtualId = sel.value;
+            document.getElementById('nome-obra-titulo').innerText = sel.options[sel.selectedIndex].text;
+            
+            document.getElementById('selecao-obra').classList.add('hidden');
+            document.getElementById('painel-supervisor').classList.remove('hidden');
+            
+            await carregarEquipe();
+            carregarPendentes();
+        }
+
+        async function carregarEquipe() {
+            const { data } = await supabaseClient.from('jsp_equipe').select('id, nome, matricula').order('nome');
+            const selectManual = document.getElementById('manual-funcionario');
+            selectManual.innerHTML = '';
+            if (data) {
+                equipeGlobal = data;
+                data.forEach(f => selectManual.innerHTML += `<option value="${f.id}">${f.nome} (ID: ${f.matricula})</option>`);
+            }
+        }
+
+        // --- O SEGREDO ESTÁ AQUI: GERAR O TOKEN DINÂMICO ---
+        async function gerarQrCodeDoDia() {
+            const btn = document.getElementById('btn-gerar-qr');
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Gerando...';
+            
+            // 1. Gera um token aleatório e pega a data de hoje (YYYY-MM-DD)
+            const token = Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            // Ajuste de fuso horário para garantir que é a data do Brasil
+            const hoje = new Date().toLocaleDateString('en-CA'); // Retorna YYYY-MM-DD
+
+            // 2. Salva no banco de dados
+            const { error } = await supabaseClient.from('jsp_obras')
+                .update({ token_diario: token, data_token: hoje })
+                .eq('id', obraAtualId);
+
+            if(error) {
+                btn.innerHTML = 'Erro ao gerar';
+                return alert("Erro: " + error.message);
+            }
+
+            // 3. Monta o Link do Ponto com a Trava e Gera a Imagem
+            // Ele descobre onde o sistema está hospedado e troca encarregado.html por ponto.html
+            const baseUrl = window.location.href.split('encarregado.html')[0]; 
+            const linkPonto = `${baseUrl}ponto.html?obra_id=${obraAtualId}&token=${token}`;
+            
+            // API gratuita para gerar imagem do QR Code
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkPonto)}`;
+            
+            document.getElementById('img-qr-code').src = qrImageUrl;
+            document.getElementById('area-qr-code').classList.remove('hidden');
+            document.getElementById('area-qr-code').classList.add('flex');
+            
+            btn.innerHTML = '<i data-lucide="refresh-cw" class="w-5 h-5"></i> Gerar Novo Código';
+            lucide.createIcons();
+        }
+
+        // --- FUNÇÕES DE VALIDAÇÃO (Iguais ao original) ---
+        async function carregarPendentes() {
+            const tbody = document.getElementById('lista-pendentes');
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-sm font-bold text-blue-600">Buscando...</td></tr>';
+            const { data, error } = await supabaseClient.from('jsp_ponto_diario').select('*').eq('obra_id', obraAtualId).eq('status', 'PENDENTE').order('hora_registro', { ascending: false });
+            if (error) return tbody.innerHTML = `<tr><td colspan="4">Erro</td></tr>`;
+            if (!data || data.length === 0) return tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400">Nenhum pendente.</td></tr>';
+            
+            tbody.innerHTML = '';
+            data.forEach(p => {
+                const func = equipeGlobal.find(e => e.id == p.funcionario_id);
+                const nomeDisplay = func ? `${func.nome.split(' ')[0]} (#${func.matricula})` : `Desconhecido`;
+                const horaF = new Date(p.hora_registro).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-3 font-bold text-blue-700 text-xs uppercase">${nomeDisplay}</td>
+                        <td class="p-3 text-center"><input type="time" id="hora-edit-${p.id}" value="${horaF}" class="p-1 border rounded w-20 text-xs text-center font-bold"></td>
+                        <td class="p-3"><select id="tipo-edit-${p.id}" class="p-1 border rounded text-xs font-bold w-full"><option value="ENTRADA">Entrada</option><option value="SAIDA">Saída</option></select></td>
+                        <td class="p-3 text-center flex justify-center gap-1">
+                            <button onclick="validar('${p.id}', '${p.hora_registro}')" class="p-1.5 bg-emerald-100 text-emerald-700 rounded"><i data-lucide="check" class="w-4 h-4"></i></button>
+                            <button onclick="recusar('${p.id}')" class="p-1.5 bg-red-50 text-red-500 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>`;
+            });
+            lucide.createIcons();
+        }
+
+        async function validar(pontoId, horaOriginal) {
+            const tipo = document.getElementById(`tipo-edit-${pontoId}`).value;
+            const horaEditada = document.getElementById(`hora-edit-${pontoId}`).value;
+            let dataSalvar = new Date(horaOriginal);
+            const [h, m] = horaEditada.split(':');
+            dataSalvar.setHours(h, m, 0);
+            await supabaseClient.from('jsp_ponto_diario').update({ status: 'VALIDADO', tipo: tipo, hora_registro: dataSalvar.toISOString() }).eq('id', pontoId);
+            carregarPendentes();
+        }
+
+        async function recusar(pontoId) {
+            if(confirm("Apagar registro permanentemente?")) {
+                await supabaseClient.from('jsp_ponto_diario').delete().eq('id', pontoId);
+                carregarPendentes();
+            }
+        }
+
+        function abrirModalManual() { document.getElementById('modal-manual').classList.remove('hidden'); document.getElementById('manual-hora').value = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+        function fecharModalManual() { document.getElementById('modal-manual').classList.add('hidden'); }
+        
+        async function salvarPontoManual() {
+            const fId = document.getElementById('manual-funcionario').value;
+            const hora = document.getElementById('manual-hora').value;
+            const tipo = document.getElementById('manual-tipo').value;
+            if(!fId || !hora) return;
+            let dataManual = new Date(); const [h, m] = hora.split(':'); dataManual.setHours(h, m, 0);
+            await supabaseClient.from('jsp_ponto_diario').insert([{ funcionario_id: fId, obra_id: obraAtualId, tipo: tipo, status: 'VALIDADO', hora_registro: dataManual.toISOString(), lat_registro: 'MANUAL', lng_registro: 'MANUAL' }]);
+            fecharModalManual(); carregarPendentes();
+        }
+    </script>
+</body>
+</html>
