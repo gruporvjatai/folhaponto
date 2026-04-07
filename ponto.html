@@ -172,7 +172,7 @@
 
                 const hoje = new Date().toLocaleDateString('en-CA'); 
                 if (obra.token_diario !== tokenRecebido || obra.data_token !== hoje) {
-                    return { sucesso: false, mensagem: "Este QR Code expirou! Peça para o encarregado gerar o código de hoje." };
+                    return { sucesso: false, mensagem: "Este QR Code expirou!" };
                 }
 
                 // Carrega a equipa logo de seguida
