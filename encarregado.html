@@ -173,7 +173,8 @@
 
             // 3. Monta o Link do Ponto com a Trava e Gera a Imagem
             // Ele descobre onde o sistema está hospedado e troca encarregado.html por ponto.html
-            const baseUrl = window.location.href.split('encarregado.html')[0]; 
+            const urlObj = new URL(window.location.href);
+            const baseUrl = urlObj.origin + urlObj.pathname.substring(0, urlObj.pathname.lastIndexOf('/') + 1);
             const linkPonto = `${baseUrl}ponto.html?obra_id=${obraAtualId}&token=${token}`;
             
             // API gratuita para gerar imagem do QR Code
