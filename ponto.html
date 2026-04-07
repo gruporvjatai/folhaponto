@@ -88,6 +88,7 @@
         const SUPABASE_KEY = 'sb_publishable_B2a4vA22qf4XGcrxPDRAaw_13rW51uI';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const TRAVAR_POR_OBRA = true;
+        const RAIO_TOLERANCIA = 80;
 
         const urlParams = new URLSearchParams(window.location.search);
         const obraId = urlParams.get('obra_id'); 
@@ -203,7 +204,7 @@
 
             const statusDiv = document.getElementById('gps-status');
 
-            if (distancia <= 100) { 
+            if (distancia <= RAIO_TOLERANCIA) { 
                 statusDiv.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5"></i> ✅ Localização Confirmada! (${Math.round(distancia)}m)`;
                 statusDiv.className = "mb-6 p-4 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-bold flex items-center justify-center gap-2 border border-emerald-200";
                 document.getElementById('btn-registrar').disabled = false;
