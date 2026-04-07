@@ -10,9 +10,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="w-full max-w-xl bg-white p-6 rounded-xl shadow-2xl transition-all">
-        
-        <div class="flex justify-between items-center mb-6 border-b pb-4">
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
             <div class="flex items-center gap-2">
                 <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <i data-lucide="shield-check" class="text-blue-600"></i> Painel
@@ -23,25 +21,24 @@
             </div>
             <img src="https://i.postimg.cc/PqdgXGF0/logo-rv-negociospng.png" alt="RV" class="h-8">
         </div>
-
         <div id="login-supervisor" class="max-w-xs mx-auto text-center py-8">
             <i data-lucide="lock" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
             <p class="text-sm font-bold text-slate-600 mb-2">Digite a senha para acessar:</p>
             <input type="password" id="senha-supervisor" placeholder="Senha" class="w-full p-3 border-2 rounded-lg mb-3 text-center font-bold outline-none focus:border-blue-500">
-            <button onclick="loginSupervisor()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">Entrar</button>
+            <button onclick="loginSupervisor()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700">Entrar</button>
         </div>
 
         <div id="selecao-obra" class="hidden text-center py-4">
             <p class="text-sm font-bold text-slate-600 mb-2 uppercase">Selecione a Obra de Hoje:</p>
             <select id="select-obra" class="w-full p-4 border-2 rounded-lg mb-4 text-center font-bold outline-none focus:border-blue-500 bg-slate-50 text-lg"></select>
-            <button onclick="acessarObra()" class="w-full bg-indigo-600 text-white p-4 rounded-lg font-bold hover:bg-indigo-700 shadow-lg text-lg flex items-center justify-center gap-2 transition">
+            <button onclick="acessarObra()" class="w-full bg-indigo-600 text-white p-4 rounded-lg font-bold hover:bg-indigo-700 shadow-lg text-lg flex items-center justify-center gap-2">
                 <i data-lucide="arrow-right-circle"></i> Gerenciar esta Obra
             </button>
         </div>
 
         <div id="painel-supervisor" class="hidden">
             <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl mb-6 text-center">
-                <h3 id="nome-obra-titulo" class="font-black text-indigo-800 text-lg mb-2 uppercase">OBRA...</h3>
+                <h3 id="nome-obra-titulo" class="font-black text-indigo-800 text-lg mb-2">OBRA...</h3>
                 
                 <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
                     <p class="text-xs font-bold text-slate-500 uppercase mb-2">QR Code de Hoje para os Funcionários</p>
@@ -62,20 +59,23 @@
                 <button onclick="carregarPendentes()" class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-bold"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Atualizar</button>
             </div>
 
-            <div id="lista-pendentes" class="space-y-3 mb-6 max-h-[400px] overflow-y-auto pr-1">
+            <div id="lista-pendentes" class="space-y-3 mb-6">
                 </div>
             
-            <div class="space-y-3">
-                <button onclick="abrirModalManual()" class="p-3 bg-slate-800 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-900 w-full transition shadow-lg">
-                    <i data-lucide="edit" class="w-4 h-4"></i> Lançar Ponto Manual
-                </button>
+            <button onclick="abrirModalManual()" class="p-3 bg-slate-800 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-900 w-full transition shadow-lg">
+                <i data-lucide="edit" class="w-4 h-4"></i> Lançar Ponto Manual (Sem Celular)
+            </button>
 
-                <button id="btn-whatsapp" onclick="compartilharRelatorioWhatsApp()" class="p-3 bg-green-600 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700 w-full transition shadow-lg">
-                    <i data-lucide="share-2" class="w-4 h-4"></i> Compartilhar Relatório no WhatsApp
-                </button>
-            </div>
-        </div>
-    </div> <div id="modal-manual" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <button id="btn-whatsapp" onclick="compartilharRelatorioWhatsApp()" class="mt-3 p-3 bg-green-600 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700 w-full transition shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                </svg>
+                Compartilhar Relatório do Dia
+            </button>
+
+    <!-- ============================================================================================================================-->
+
+    <div id="modal-manual" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
             <h3 class="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2"><i data-lucide="clock" class="text-blue-600"></i> Ponto Manual</h3>
             <div class="space-y-4">
@@ -95,8 +95,8 @@
                     </select>
                 </div>
                 <div class="pt-2">
-                    <button onclick="salvarPontoManual()" class="w-full p-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 mb-2 transition">Salvar Definitivo</button>
-                    <button onclick="fecharModalManual()" class="w-full p-3 bg-slate-200 text-slate-700 rounded-lg font-bold transition">Cancelar</button>
+                    <button onclick="salvarPontoManual()" class="w-full p-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 mb-2">Salvar Definitivo</button>
+                    <button onclick="fecharModalManual()" class="w-full p-3 bg-slate-200 text-slate-700 rounded-lg font-bold">Cancelar</button>
                 </div>
             </div>
         </div>
@@ -111,8 +111,10 @@
         let obraAtualId = null;
         let equipeGlobal = [];
 
+        // FUNÇÃO AJUDANTE DE FUSO HORÁRIO BRASIL (Evita +3h no banco)
         function getHoraLocalParaSalvar(dataObj) {
             const fusoOffset = dataObj.getTimezoneOffset() * 60000;
+            // Retorna o formato YYYY-MM-DDTHH:mm:ss cravado na hora do seu relógio
             return new Date(dataObj.getTime() - fusoOffset).toISOString().slice(0, 19);
         }
 
@@ -127,7 +129,7 @@
         async function carregarObras() {
             const { data } = await supabaseClient.from('jsp_obras').select('id, nome').order('nome');
             const sel = document.getElementById('select-obra');
-            sel.innerHTML = '<option value="">-- Escolha a Obra --</option>';
+            sel.innerHTML = '<option value="">-- Selecione --</option>';
             if(data) data.forEach(o => sel.innerHTML += `<option value="${o.id}">${o.nome}</option>`);
         }
 
@@ -138,7 +140,6 @@
             document.getElementById('nome-obra-titulo').innerText = sel.options[sel.selectedIndex].text;
             document.getElementById('selecao-obra').classList.add('hidden');
             document.getElementById('painel-supervisor').classList.remove('hidden');
-            document.getElementById('btn-trocar-obra').classList.remove('hidden');
             await carregarEquipe();
             carregarPendentes();
         }
@@ -175,18 +176,22 @@
 
         async function carregarPendentes() {
             const container = document.getElementById('lista-pendentes');
-            container.innerHTML = '<p class="text-center p-4 text-sm font-bold text-blue-600 animate-pulse">Buscando registros...</p>';
+            container.innerHTML = '<p class="text-center p-4 text-sm font-bold text-blue-600 animate-pulse">Buscando...</p>';
             
             const { data, error } = await supabaseClient.from('jsp_ponto_diario')
                 .select('*').eq('obra_id', obraAtualId).eq('status', 'PENDENTE').order('hora_registro', { ascending: false });
             
-            if (error) return container.innerHTML = `<p class="text-center text-red-500 font-bold p-4">Erro Supabase</p>`;
-            if (!data || data.length === 0) return container.innerHTML = '<p class="text-center text-slate-400 font-bold p-6 border rounded-lg bg-white shadow-inner">Sem registros para validar.</p>';
+            if (error) return container.innerHTML = `<p class="text-center text-red-500 font-bold p-4">Erro ao carregar</p>`;
+            if (!data || data.length === 0) return container.innerHTML = '<p class="text-center text-slate-400 font-bold p-6 border rounded-lg bg-white">Nenhum registro pendente.</p>';
             
             container.innerHTML = '';
+            
+            // MUDANÇA: Geração de Cards Mobile
             data.forEach(p => {
                 const func = equipeGlobal.find(e => e.id == p.funcionario_id);
                 const nomeDisplay = func ? `${func.nome.split(' ')[0]} (#${func.matricula})` : `Desconhecido`;
+                
+                // Formata hora perfeitamente
                 const dataObj = new Date(p.hora_registro);
                 const horaF = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -195,25 +200,27 @@
                         <p class="font-black text-blue-800 text-sm uppercase mb-3 flex items-center gap-2">
                             <i data-lucide="user" class="w-4 h-4 text-blue-500"></i> ${nomeDisplay}
                         </p>
+                        
                         <div class="flex gap-2 mb-3">
                             <div class="flex-1">
                                 <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Horário</label>
-                                <input type="time" id="hora-edit-${p.id}" value="${horaF}" class="w-full p-2 border rounded-lg bg-slate-50 font-black text-center text-slate-700 outline-none">
+                                <input type="time" id="hora-edit-${p.id}" value="${horaF}" class="w-full p-2 border rounded-lg bg-slate-50 font-black text-center text-slate-700 focus:border-blue-500 outline-none">
                             </div>
                             <div class="flex-[1.5]">
                                 <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Tipo</label>
-                                <select id="tipo-edit-${p.id}" class="w-full p-2 border rounded-lg bg-slate-50 font-bold text-slate-700 outline-none">
-                                    <option value="ENTRADA">Entrada</option>
-                                    <option value="SAIDA">Saída</option>
+                                <select id="tipo-edit-${p.id}" class="w-full p-2 border rounded-lg bg-slate-50 font-bold text-slate-700 focus:border-blue-500 outline-none">
+                                    <option value="ENTRADA">Entrada da Obra</option>
+                                    <option value="SAIDA">Saída da Obra</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="flex gap-2 pt-3 border-t">
-                            <button onclick="validar('${p.id}', '${p.hora_registro}')" class="flex-1 py-2 bg-emerald-100 hover:bg-emerald-600 text-emerald-800 hover:text-white rounded-lg font-bold flex justify-center items-center gap-1 transition">
-                                <i data-lucide="check" class="w-4 h-4"></i> Confirmar
+
+                        <div class="flex gap-2 mt-2 pt-3 border-t border-slate-100">
+                            <button onclick="validar('${p.id}', '${p.hora_registro}')" class="flex-1 py-2 bg-emerald-100 hover:bg-emerald-600 text-emerald-800 hover:text-white rounded-lg font-bold flex justify-center items-center gap-2 transition">
+                                <i data-lucide="check-circle" class="w-5 h-5"></i> Confirmar
                             </button>
-                            <button onclick="recusar('${p.id}')" class="px-4 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg font-bold transition">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            <button onclick="recusar('${p.id}')" class="px-4 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg font-bold transition flex justify-center items-center">
+                                <i data-lucide="trash-2" class="w-5 h-5"></i>
                             </button>
                         </div>
                     </div>
@@ -225,14 +232,20 @@
         async function validar(pontoId, horaOriginal) {
             const tipo = document.getElementById(`tipo-edit-${pontoId}`).value;
             const horaEditada = document.getElementById(`hora-edit-${pontoId}`).value;
+            
+            // LÓGICA DE FUSO HORÁRIO CORRIGIDA
             let dataSalvar = new Date(horaOriginal);
             const [h, m] = horaEditada.split(':');
             dataSalvar.setHours(h, m, 0);
+            
             const horaLocalCravada = getHoraLocalParaSalvar(dataSalvar);
 
             await supabaseClient.from('jsp_ponto_diario').update({ 
-                status: 'VALIDADO', tipo: tipo, hora_registro: horaLocalCravada 
+                status: 'VALIDADO', 
+                tipo: tipo, 
+                hora_registro: horaLocalCravada 
             }).eq('id', pontoId);
+            
             carregarPendentes();
         }
 
@@ -255,78 +268,110 @@
             const tipo = document.getElementById('manual-tipo').value;
             if(!fId || !hora) return;
             
+            // LÓGICA DE FUSO HORÁRIO CORRIGIDA
             let dataManual = new Date(); 
             const [h, m] = hora.split(':'); 
             dataManual.setHours(h, m, 0);
+            
             const horaLocalCravada = getHoraLocalParaSalvar(dataManual);
 
             await supabaseClient.from('jsp_ponto_diario').insert([{ 
-                funcionario_id: fId, obra_id: obraAtualId, tipo: tipo, 
-                status: 'VALIDADO', hora_registro: horaLocalCravada, 
-                lat_registro: 'MANUAL', lng_registro: 'MANUAL' 
+                funcionario_id: fId, 
+                obra_id: obraAtualId, 
+                tipo: tipo, 
+                status: 'VALIDADO', 
+                hora_registro: horaLocalCravada, 
+                lat_registro: 'MANUAL', 
+                lng_registro: 'MANUAL' 
             }]);
-            fecharModalManual(); carregarPendentes();
+            
+            fecharModalManual(); 
+            carregarPendentes();
         }
 
         async function compartilharRelatorioWhatsApp() {
             const btn = document.getElementById('btn-whatsapp');
             const textoOriginal = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gerando...';
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gerando Relatório...';
             lucide.createIcons();
 
+            // 1. Busca todos os registros da obra (Crescente, para mostrar Entrada antes de Saída)
             const { data, error } = await supabaseClient.from('jsp_ponto_diario')
-                .select('*').eq('obra_id', obraAtualId).order('hora_registro', { ascending: true });
+                .select('*')
+                .eq('obra_id', obraAtualId)
+                .order('hora_registro', { ascending: true });
 
-            if (error) { alert("Erro: " + error.message); btn.innerHTML = textoOriginal; return; }
+            if (error) {
+                alert("Erro ao gerar relatório: " + error.message);
+                btn.innerHTML = textoOriginal;
+                return;
+            }
 
+            // 2. FILTRA OS DE HOJE (Cortando o texto direto, sem matemática de fuso horário)
+            // Pega a data de hoje cravada no relógio do celular: YYYY-MM-DD
             const hojeLocal = new Date();
             const fusoOffset = hojeLocal.getTimezoneOffset() * 60000;
             const hojeIsoStr = new Date(hojeLocal.getTime() - fusoOffset).toISOString().slice(0, 10);
             const dataHojeBr = hojeLocal.toLocaleDateString('pt-BR');
 
-            const registrosHoje = data.filter(p => p.hora_registro.startsWith(hojeIsoStr));
+            const registrosHoje = data.filter(p => {
+                // p.hora_registro vem do banco como "2026-04-07T14:30:00..."
+                return p.hora_registro.startsWith(hojeIsoStr);
+            });
 
             if (registrosHoje.length === 0) {
-                alert("Nenhum registro hoje.");
+                alert("Nenhum registro encontrado para a data de hoje.");
                 btn.innerHTML = textoOriginal;
                 return;
             }
 
+            // 3. AGRUPA POR FUNCIONÁRIO
             let pontosAgrupados = {};
             registrosHoje.forEach(p => {
-                if (!pontosAgrupados[p.funcionario_id]) pontosAgrupados[p.funcionario_id] = [];
+                if (!pontosAgrupados[p.funcionario_id]) {
+                    pontosAgrupados[p.funcionario_id] = [];
+                }
                 pontosAgrupados[p.funcionario_id].push(p);
             });
 
+            // 4. MONTA A MENSAGEM FORMATADA PARA O WHATSAPP
             const nomeObra = document.getElementById('nome-obra-titulo').innerText;
-            let mensagem = `📋 *RELATÓRIO DE PONTO DIÁRIO*\n📍 *Obra:* ${nomeObra}\n📅 *Data:* ${dataHojeBr}\n\n`;
+            
+            let mensagem = `📋 *RELATÓRIO DE PONTO DIÁRIO*\n`;
+            mensagem += `📍 *Obra:* ${nomeObra}\n`;
+            mensagem += `📅 *Data:* ${dataHojeBr}\n\n`;
 
+            // Percorre cada funcionário agrupado
             Object.keys(pontosAgrupados).forEach(fId => {
                 const func = equipeGlobal.find(e => e.id == fId);
+                // Pega só o PRIMEIRO nome pra economizar espaço
                 const nomeCurto = func ? func.nome.split(' ')[0] : `ID ${fId}`; 
-                mensagem += `👷 *${nomeCurto}*\n`;
+                
+                mensagem += `👷 *${nomeCurto}*\n`; // Nome em negrito
+                
+                // Lista os horários dessa pessoa
                 pontosAgrupados[fId].forEach(p => {
+                    // CORREÇÃO DO HORÁRIO: Corta exatamente a string HH:mm (Ex: "2026-04-07T14:30:00" vira "14:30")
                     const horaExata = p.hora_registro.split('T')[1].substring(0, 5); 
+                    
                     let iconeStatus = p.status === 'VALIDADO' ? '✅' : '⏳';
                     let iconeTipo = p.tipo === 'ENTRADA' ? '📥' : '📤';
-                    mensagem += `  ${iconeStatus} ${iconeTipo} ${horaExata} - ${p.tipo}\n`;
+                    let txtTipo = p.tipo === 'ENTRADA' ? 'Entrada' : 'Saída';
+                    
+                    mensagem += `  ${iconeStatus} ${iconeTipo} ${horaExata} - ${txtTipo}\n`;
                 });
-                mensagem += `\n`;
+                
+                mensagem += `\n`; // Espaço entre um funcionário e outro
             });
 
             mensagem += `_Gerado por RV Sistemas_`;
-            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`, '_blank');
-            btn.innerHTML = textoOriginal;
-            lucide.createIcons();
-        }
 
-        function voltarSelecaoObra() {
-            document.getElementById('painel-supervisor').classList.add('hidden');
-            document.getElementById('btn-trocar-obra').classList.add('hidden');
-            document.getElementById('selecao-obra').classList.remove('hidden');
-            document.getElementById('area-qr-code').classList.add('hidden');
-            document.getElementById('img-qr-code').src = "";
-            lucide.createIcons();
+            // 5. ABRE O WHATSAPP
+            const urlFormatada = encodeURIComponent(mensagem);
+            window.open(`https://api.whatsapp.com/send?text=${urlFormatada}`, '_blank');
+
+            // Volta o botão ao normal
+            btn.innerHTML = textoOriginal;
         }
     </script>
 </body>
