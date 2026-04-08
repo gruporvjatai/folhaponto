@@ -43,10 +43,14 @@
         </div>
 
         <div id="selecao-obra" class="hidden text-center py-4">
-            <p class="text-sm font-bold text-slate-600 mb-2 uppercase">Selecione a Obra de Hoje:</p>
-            <select id="select-obra" class="w-full p-4 border-2 rounded-lg mb-4 text-center font-bold outline-none focus:border-blue-500 bg-slate-50 text-lg"></select>
-            <button onclick="acessarObra()" class="w-full bg-indigo-600 text-white p-4 rounded-lg font-bold hover:bg-indigo-700 shadow-lg text-lg flex items-center justify-center gap-2">
-                <i data-lucide="arrow-right-circle"></i> Gerenciar esta Obra
+            <p class="text-sm font-bold text-slate-600 mb-2 uppercase">Escolha a Obra:</p>
+            <select id="select-obra" class="w-full p-4 border-2 rounded-lg mb-4 text-center font-bold outline-none bg-slate-50 text-lg"></select>
+            <button onclick="acessarObra()" class="w-full bg-indigo-600 text-white p-4 rounded-lg font-bold shadow-lg flex items-center justify-center gap-2">
+                <i data-lucide="arrow-right-circle"></i> Gerenciar Obra
+            </button>
+            
+            <button onclick="definirLocalObra()" class="mt-6 text-[11px] font-bold text-slate-400 hover:text-slate-600 uppercase underline transition flex items-center justify-center gap-1 mx-auto">
+                <i data-lucide="map-pin" class="w-3 h-3"></i> Definir Localização Atual como Sede da Obra
             </button>
         </div>
 
@@ -405,6 +409,48 @@
             lucide.createIcons();
         }
 
+      async function definirLocalObra() {
+            // 1. Verifica se ele escolheu alguma obra no select
+            const sel = document.getElementById('select-obra');
+            if(!sel.value) return alert("Selecione a obra no menu acima primeiro!");
+
+            // 2. Pede a senha de Administrador (Diferente da do encarregado)
+            const senhaAdmin = prompt("Acesso Restrito: Digite a senha de Administrador (RV) para alterar o GPS da obra:");
+            
+            // Troque 'rvadmin' pela senha forte que você quiser usar
+            if(senhaAdmin !== "rvadmin") { 
+                return alert("❌ Senha Incorreta! Ação cancelada.");
+            }
+
+            // 3. Pede confirmação final
+            const nomeObra = sel.options[sel.selectedIndex].text;
+            if(!confirm(`Atenção: Isso vai cravar a sua localização GPS atual como o ponto oficial da obra '${nomeObra}'. Deseja continuar?`)) {
+                return;
+            }
+
+            // 4. Captura o GPS e Salva no Banco
+            if (!("geolocation" in navigator)) return alert("Seu navegador não suporta GPS.");
+
+            alert("Buscando satélites... Aguarde!"); // Um aviso simples para ele não clicar de novo
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const novaLat = pos.coords.latitude;
+                const novaLng = pos.coords.longitude;
+
+                // Faz o UPDATE lá no Supabase
+                const { error } = await supabaseClient.from('jsp_obras')
+                    .update({ lat: novaLat.toString(), lng: novaLng.toString() })
+                    .eq('id', sel.value);
+
+                if(error) {
+                    alert("Erro ao salvar no banco: " + error.message);
+                } else {
+                    alert("✅ Localização da obra atualizada com sucesso no banco de dados!");
+                }
+            }, (err) => {
+                alert("❌ Erro ao buscar GPS. Verifique se a localização está ativada no celular.");
+            }, { enableHighAccuracy: true });
+        }
         
     </script>
 </body>
