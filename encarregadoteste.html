@@ -130,8 +130,17 @@
         let equipeGlobal = [];
 
         // FUNÇÃO AJUDANTE DE FUSO HORÁRIO BRASIL (Evita +3h no banco)
+        // FUNÇÃO AJUDANTE CORRIGIDA (Força o fuso do Brasil -03:00)
         function getHoraLocalParaSalvar(dataObj) {
-            return dataObj.toISOString();
+            const ano = dataObj.getFullYear();
+            const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
+            const dia = String(dataObj.getDate()).padStart(2, '0');
+            const horas = String(dataObj.getHours()).padStart(2, '0');
+            const minutos = String(dataObj.getMinutes()).padStart(2, '0');
+            const segundos = String(dataObj.getSeconds()).padStart(2, '0');
+            
+            // Retorna ex: "2026-04-09T10:25:00-03:00"
+            return `${ano}-${mes}-${dia}T${horas}:${minutos}:${segundos}-03:00`;
         }
 
         function loginSupervisor() {
