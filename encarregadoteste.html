@@ -129,11 +129,6 @@
         let obraAtualId = null;
         let equipeGlobal = [];
 
-        // FUNÇÃO AJUDANTE DE FUSO HORÁRIO BRASIL (Evita +3h no banco)
-        // FUNÇÃO AJUDANTE CORRIGIDA (Força o fuso do Brasil -03:00)
-        // PODE APAGAR ISSO TUDO AQUI:
-function getHoraLocalParaSalvar(dataObj) { ... }
-
         function loginSupervisor() {
             if(document.getElementById('senha-supervisor').value === '15748') {
                 document.getElementById('login-supervisor').classList.add('hidden');
@@ -175,9 +170,14 @@ function getHoraLocalParaSalvar(dataObj) { ... }
             const btn = document.getElementById('btn-gerar-qr');
             btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Gerando...';
             const token = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const hoje = new Date().toLocaleDateString('en-CA'); 
+            
+            const hoje = new Date();
+            const ano = hoje.getFullYear();
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            const dataHojeStr = `${ano}-${mes}-${dia}`;
 
-            const { error } = await supabaseClient.from('jsp_obras').update({ token_diario: token, data_token: hoje }).eq('id', obraAtualId);
+            const { error } = await supabaseClient.from('jsp_obras').update({ token_diario: token, data_token: dataHojeStr }).eq('id', obraAtualId);
             if(error) return alert("Erro: " + error.message);
 
             const urlObj = new URL(window.location.href);
@@ -207,8 +207,15 @@ function getHoraLocalParaSalvar(dataObj) { ... }
                 const func = equipeGlobal.find(e => e.id == p.funcionario_id);
                 const nomeDisplay = func ? `${func.nome.split(' ')[0]} (#${func.matricula})` : `Desconhecido`;
                 
-                const dataObj = new Date(p.hora_registro);
-                const horaF = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                // MÁGICA 1: Pega a hora exata direto do texto que veio do banco, ignorando o fuso do navegador!
+                let horaF = "00:00";
+                if (p.hora_registro) {
+                    if (p.hora_registro.includes('T')) {
+                        horaF = p.hora_registro.split('T')[1].substring(0, 5);
+                    } else if (p.hora_registro.includes(' ')) {
+                        horaF = p.hora_registro.split(' ')[1].substring(0, 5);
+                    }
+                }
 
                 container.innerHTML += `
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -248,11 +255,14 @@ function getHoraLocalParaSalvar(dataObj) { ... }
             const tipo = document.getElementById(`tipo-edit-${pontoId}`).value;
             const horaEditada = document.getElementById(`hora-edit-${pontoId}`).value;
             
-            // 1. LÓGICA DE TEXTO: Corta a data original ignorando fuso (Pega só o YYYY-MM-DD)
-            const dataApenas = horaOriginal.split('T')[0];
+            // MÁGICA 2: Corta a data do texto e cola com a hora exata da tela
+            let dataApenas = "";
+            if (horaOriginal.includes('T')) dataApenas = horaOriginal.split('T')[0];
+            else if (horaOriginal.includes(' ')) dataApenas = horaOriginal.split(' ')[0];
+            else dataApenas = new Date().toISOString().split('T')[0];
             
-            // Monta a string exata que tá na tela. Ex: "2026-04-09T07:25:00"
-            const horaLocalCravada = `${dataApenas}T${horaEditada}:00`;
+            // Usamos espaço em vez de 'T' para o banco aceitar como texto local cravado
+            const horaLocalCravada = `${dataApenas} ${horaEditada}:00`;
 
             await supabaseClient.from('jsp_ponto_diario').update({ 
                 status: 'VALIDADO', 
@@ -260,15 +270,10 @@ function getHoraLocalParaSalvar(dataObj) { ... }
                 hora_registro: horaLocalCravada 
             }).eq('id', pontoId);
 
-            // 2. LÓGICA DE SAÍDA AUTOMÁTICA
             if (tipo === 'ENTRADA') {
                 const h = parseInt(horaEditada.split(':')[0]);
-                
-                // Se a entrada for antes do meio dia, saída 11:00. Senão, 17:00.
                 const horaSaidaAutomatica = h < 12 ? "11:00:00" : "17:00:00";
-                
-                // Monta a saída também no formato de texto puro
-                const horaSaidaCravada = `${dataApenas}T${horaSaidaAutomatica}`;
+                const horaSaidaCravada = `${dataApenas} ${horaSaidaAutomatica}`;
 
                 await supabaseClient.from('jsp_ponto_diario').insert([{
                     funcionario_id: funcionarioId,
@@ -284,7 +289,6 @@ function getHoraLocalParaSalvar(dataObj) { ... }
             carregarPendentes();
         }
 
-        
         async function recusar(pontoId) {
             if(confirm("Apagar registro permanentemente?")) {
                 await supabaseClient.from('jsp_ponto_diario').delete().eq('id', pontoId);
@@ -294,7 +298,11 @@ function getHoraLocalParaSalvar(dataObj) { ... }
 
         function abrirModalManual() { 
             document.getElementById('modal-manual').classList.remove('hidden'); 
-            document.getElementById('manual-hora').value = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); 
+            
+            const hojeLocal = new Date();
+            const h = String(hojeLocal.getHours()).padStart(2, '0');
+            const m = String(hojeLocal.getMinutes()).padStart(2, '0');
+            document.getElementById('manual-hora').value = `${h}:${m}`; 
         }
         function fecharModalManual() { document.getElementById('modal-manual').classList.add('hidden'); }
         
@@ -304,14 +312,13 @@ function getHoraLocalParaSalvar(dataObj) { ... }
             const tipo = document.getElementById('manual-tipo').value;
             if(!fId || !hora) return;
             
-            // Monta a data de hoje manualmente em texto (YYYY-MM-DD)
             const hojeLocal = new Date();
             const ano = hojeLocal.getFullYear();
             const mes = String(hojeLocal.getMonth() + 1).padStart(2, '0');
             const dia = String(hojeLocal.getDate()).padStart(2, '0');
             const dataApenas = `${ano}-${mes}-${dia}`;
             
-            const horaLocalCravada = `${dataApenas}T${hora}:00`;
+            const horaLocalCravada = `${dataApenas} ${hora}:00`;
 
             await supabaseClient.from('jsp_ponto_diario').insert([{ 
                 funcionario_id: fId, 
@@ -326,7 +333,7 @@ function getHoraLocalParaSalvar(dataObj) { ... }
             if (tipo === 'ENTRADA') {
                 const h = parseInt(hora.split(':')[0]);
                 const horaSaidaAutomatica = h < 12 ? "11:00:00" : "17:00:00";
-                const horaSaidaCravada = `${dataApenas}T${horaSaidaAutomatica}`;
+                const horaSaidaCravada = `${dataApenas} ${horaSaidaAutomatica}`;
 
                 await supabaseClient.from('jsp_ponto_diario').insert([{
                     funcionario_id: fId,
@@ -360,12 +367,16 @@ function getHoraLocalParaSalvar(dataObj) { ... }
                 return;
             }
 
-            // 2. FILTRA OS DE HOJE (Agora usando o objeto Date para lidar com o fuso perfeitamente)
-            const hojeBr = new Date().toLocaleDateString('pt-BR');
+            const hojeLocal = new Date();
+            const ano = hojeLocal.getFullYear();
+            const mes = String(hojeLocal.getMonth() + 1).padStart(2, '0');
+            const dia = String(hojeLocal.getDate()).padStart(2, '0');
+            const dataHojeBusca = `${ano}-${mes}-${dia}`;
+            const hojeBr = `${dia}/${mes}/${ano}`;
 
             const registrosHoje = data.filter(p => {
-                const dataRegistro = new Date(p.hora_registro);
-                return dataRegistro.toLocaleDateString('pt-BR') === hojeBr;
+                if(!p.hora_registro) return false;
+                return p.hora_registro.startsWith(dataHojeBusca);
             });
 
             if (registrosHoje.length === 0) {
@@ -374,7 +385,6 @@ function getHoraLocalParaSalvar(dataObj) { ... }
                 return;
             }
 
-            // 3. AGRUPA POR FUNCIONÁRIO
             let pontosAgrupados = {};
             registrosHoje.forEach(p => {
                 if (!pontosAgrupados[p.funcionario_id]) {
@@ -383,7 +393,6 @@ function getHoraLocalParaSalvar(dataObj) { ... }
                 pontosAgrupados[p.funcionario_id].push(p);
             });
 
-            // 4. MONTA A MENSAGEM
             const nomeObra = document.getElementById('nome-obra-titulo').innerText;
             
             let mensagem = `📋 *RELATÓRIO DE PONTO DIÁRIO*\n`;
@@ -397,9 +406,13 @@ function getHoraLocalParaSalvar(dataObj) { ... }
                 mensagem += `👷 *${nomeCurto}*\n`; 
                 
                 pontosAgrupados[fId].forEach(p => {
-                    // CORREÇÃO AQUI: Usa o Date nativo para formatar a hora certa no BR
-                    const dataRegistro = new Date(p.hora_registro);
-                    const horaExata = dataRegistro.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    // MÁGICA 3: Corta direto do texto para o Zap ficar impecável
+                    let horaExata = "00:00";
+                    if (p.hora_registro.includes('T')) {
+                        horaExata = p.hora_registro.split('T')[1].substring(0, 5);
+                    } else if (p.hora_registro.includes(' ')) {
+                        horaExata = p.hora_registro.split(' ')[1].substring(0, 5);
+                    }
                     
                     let iconeStatus = p.status === 'VALIDADO' ? '✅' : '⏳';
                     let iconeTipo = p.tipo === 'ENTRADA' ? '📥' : '📤';
@@ -419,52 +432,39 @@ function getHoraLocalParaSalvar(dataObj) { ... }
             btn.innerHTML = textoOriginal;
         }
 
-        
         function voltarSelecaoObra() {
-            // 1. Esconde o painel da obra e o próprio botão de troca
             document.getElementById('painel-supervisor').classList.add('hidden');
             document.getElementById('btn-trocar-obra').classList.add('hidden');
-
-            // 2. Mostra a tela de seleção de obras
             document.getElementById('selecao-obra').classList.remove('hidden');
-
-            // 3. Limpa o QR Code anterior para não confundir o encarregado
             document.getElementById('area-qr-code').classList.add('hidden');
             document.getElementById('area-qr-code').classList.remove('flex');
             document.getElementById('img-qr-code').src = "";
-            
             lucide.createIcons();
         }
 
       async function definirLocalObra() {
-            // 1. Verifica se ele escolheu alguma obra no select
             const sel = document.getElementById('select-obra');
             if(!sel.value) return alert("Selecione a obra no menu acima primeiro!");
 
-            // 2. Pede a senha de Administrador (Diferente da do encarregado)
             const senhaAdmin = prompt("Acesso Restrito: Digite a senha de Administrador (RV) para alterar o GPS da obra:");
             
-            // Troque 'rvadmin' pela senha forte que você quiser usar
             if(senhaAdmin !== "rvadmin") { 
                 return alert("❌ Senha Incorreta! Ação cancelada.");
             }
 
-            // 3. Pede confirmação final
             const nomeObra = sel.options[sel.selectedIndex].text;
             if(!confirm(`Atenção: Isso vai cravar a sua localização GPS atual como o ponto oficial da obra '${nomeObra}'. Deseja continuar?`)) {
                 return;
             }
 
-            // 4. Captura o GPS e Salva no Banco
             if (!("geolocation" in navigator)) return alert("Seu navegador não suporta GPS.");
 
-            alert("Buscando satélites... Aguarde!"); // Um aviso simples para ele não clicar de novo
+            alert("Buscando satélites... Aguarde!"); 
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const novaLat = pos.coords.latitude;
                 const novaLng = pos.coords.longitude;
 
-                // Faz o UPDATE lá no Supabase
                 const { error } = await supabaseClient.from('jsp_obras')
                     .update({ lat: novaLat.toString(), lng: novaLng.toString() })
                     .eq('id', sel.value);
@@ -478,7 +478,6 @@ function getHoraLocalParaSalvar(dataObj) { ... }
                 alert("❌ Erro ao buscar GPS. Verifique se a localização está ativada no celular.");
             }, { enableHighAccuracy: true });
         }
-        
     </script>
 </body>
 </html>
