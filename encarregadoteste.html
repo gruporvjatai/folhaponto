@@ -131,9 +131,7 @@
 
         // FUNÇÃO AJUDANTE DE FUSO HORÁRIO BRASIL (Evita +3h no banco)
         function getHoraLocalParaSalvar(dataObj) {
-            const fusoOffset = dataObj.getTimezoneOffset() * 60000;
-            // Retorna o formato YYYY-MM-DDTHH:mm:ss cravado na hora do seu relógio
-            return new Date(dataObj.getTime() - fusoOffset).toISOString().slice(0, 19);
+            return dataObj.toISOString();
         }
 
         function loginSupervisor() {
@@ -353,7 +351,6 @@
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Gerando Relatório...';
             lucide.createIcons();
 
-            // 1. Busca todos os registros da obra (Crescente, para mostrar Entrada antes de Saída)
             const { data, error } = await supabaseClient.from('jsp_ponto_diario')
                 .select('*')
                 .eq('obra_id', obraAtualId)
@@ -365,16 +362,12 @@
                 return;
             }
 
-            // 2. FILTRA OS DE HOJE (Cortando o texto direto, sem matemática de fuso horário)
-            // Pega a data de hoje cravada no relógio do celular: YYYY-MM-DD
-            const hojeLocal = new Date();
-            const fusoOffset = hojeLocal.getTimezoneOffset() * 60000;
-            const hojeIsoStr = new Date(hojeLocal.getTime() - fusoOffset).toISOString().slice(0, 10);
-            const dataHojeBr = hojeLocal.toLocaleDateString('pt-BR');
+            // 2. FILTRA OS DE HOJE (Agora usando o objeto Date para lidar com o fuso perfeitamente)
+            const hojeBr = new Date().toLocaleDateString('pt-BR');
 
             const registrosHoje = data.filter(p => {
-                // p.hora_registro vem do banco como "2026-04-07T14:30:00..."
-                return p.hora_registro.startsWith(hojeIsoStr);
+                const dataRegistro = new Date(p.hora_registro);
+                return dataRegistro.toLocaleDateString('pt-BR') === hojeBr;
             });
 
             if (registrosHoje.length === 0) {
@@ -392,25 +385,23 @@
                 pontosAgrupados[p.funcionario_id].push(p);
             });
 
-            // 4. MONTA A MENSAGEM FORMATADA PARA O WHATSAPP
+            // 4. MONTA A MENSAGEM
             const nomeObra = document.getElementById('nome-obra-titulo').innerText;
             
             let mensagem = `📋 *RELATÓRIO DE PONTO DIÁRIO*\n`;
             mensagem += `📍 *Obra:* ${nomeObra}\n`;
-            mensagem += `📅 *Data:* ${dataHojeBr}\n\n`;
+            mensagem += `📅 *Data:* ${hojeBr}\n\n`;
 
-            // Percorre cada funcionário agrupado
             Object.keys(pontosAgrupados).forEach(fId => {
                 const func = equipeGlobal.find(e => e.id == fId);
-                // Pega só o PRIMEIRO nome pra economizar espaço
                 const nomeCurto = func ? func.nome.split(' ')[0] : `ID ${fId}`; 
                 
-                mensagem += `👷 *${nomeCurto}*\n`; // Nome em negrito
+                mensagem += `👷 *${nomeCurto}*\n`; 
                 
-                // Lista os horários dessa pessoa
                 pontosAgrupados[fId].forEach(p => {
-                    // CORREÇÃO DO HORÁRIO: Corta exatamente a string HH:mm (Ex: "2026-04-07T14:30:00" vira "14:30")
-                    const horaExata = p.hora_registro.split('T')[1].substring(0, 5); 
+                    // CORREÇÃO AQUI: Usa o Date nativo para formatar a hora certa no BR
+                    const dataRegistro = new Date(p.hora_registro);
+                    const horaExata = dataRegistro.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     
                     let iconeStatus = p.status === 'VALIDADO' ? '✅' : '⏳';
                     let iconeTipo = p.tipo === 'ENTRADA' ? '📥' : '📤';
@@ -419,19 +410,18 @@
                     mensagem += `  ${iconeStatus} ${iconeTipo} ${horaExata} - ${txtTipo}\n`;
                 });
                 
-                mensagem += `\n`; // Espaço entre um funcionário e outro
+                mensagem += `\n`; 
             });
 
             mensagem += `_Gerado por RV Sistemas_`;
 
-            // 5. ABRE O WHATSAPP
             const urlFormatada = encodeURIComponent(mensagem);
             window.open(`https://api.whatsapp.com/send?text=${urlFormatada}`, '_blank');
 
-            // Volta o botão ao normal
             btn.innerHTML = textoOriginal;
         }
 
+        
         function voltarSelecaoObra() {
             // 1. Esconde o painel da obra e o próprio botão de troca
             document.getElementById('painel-supervisor').classList.add('hidden');
