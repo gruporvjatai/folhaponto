@@ -34,9 +34,6 @@
             </div>
             
             <div class="flex items-center gap-3">
-                <button onclick="abrirTelaPonto()" class="p-2 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition" title="Abrir tela de batida de ponto">
-                    <i data-lucide="smartphone" class="w-5 h-5"></i>
-                </button>
                 <button onclick="sair()" class="p-2 text-slate-400 hover:text-red-600 bg-slate-50 hover:bg-red-50 rounded-lg transition" title="Sair / Voltar">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
                 </button>
@@ -59,10 +56,7 @@
         <div id="painel-supervisor" class="hidden">
             <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl mb-6 text-center">
                 <h3 id="nome-obra-titulo" class="font-black text-indigo-800 text-lg mb-2">OBRA...</h3>
-                <p class="text-sm text-indigo-600 font-bold">Tela de ponto disponível para funcionários</p>
-                <button onclick="abrirTelaPonto()" class="mt-2 w-full p-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">
-                    <i data-lucide="external-link" class="w-4 h-4 inline mr-1"></i> Abrir tela de ponto em nova aba
-                </button>
+                <p class="text-sm text-indigo-600 font-bold">Gerenciamento de registros pendentes</p>
             </div>
 
             <!-- Área de Pendentes -->
@@ -72,12 +66,12 @@
             </div>
             <div id="lista-pendentes" class="space-y-3 mb-6 max-h-96 overflow-y-auto pr-1"></div>
             
-            <!-- Área de Confirmados do Dia -->
-            <div class="bg-slate-100 p-4 rounded-lg mb-4 flex justify-between items-center">
-                <p class="text-xs font-bold text-slate-500 uppercase">Registros Confirmados Hoje</p>
-                <button onclick="carregarConfirmados()" class="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-bold"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Atualizar</button>
+            <!-- Botão para abrir modal de confirmados -->
+            <div class="mb-6">
+                <button onclick="abrirModalConfirmados()" class="w-full p-3 bg-white border-2 border-slate-300 text-slate-700 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition">
+                    <i data-lucide="list-checks" class="w-5 h-5"></i> Abrir já confirmados (hoje)
+                </button>
             </div>
-            <div id="lista-confirmados" class="space-y-2 mb-6 max-h-64 overflow-y-auto pr-1"></div>
             
             <button onclick="abrirModalManual()" class="p-3 bg-slate-800 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-900 w-full transition shadow-lg">
                 <i data-lucide="edit" class="w-4 h-4"></i> Lançar Ponto Manual (Sem Celular)
@@ -119,6 +113,19 @@
         </div>
     </div>
 
+    <!-- Modal Confirmados -->
+    <div id="modal-confirmados" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-slate-800"><i data-lucide="check-circle" class="inline text-green-600 mr-2"></i>Confirmados Hoje</h3>
+                <button onclick="fecharModalConfirmados()" class="p-1 hover:bg-slate-100 rounded"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="modal-confirmados-conteudo" class="space-y-2">
+                <p class="text-center text-slate-500">Carregando...</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
         const SUPABASE_URL = 'https://lyieiqhkspbowsrlngvn.supabase.co';
@@ -148,7 +155,6 @@
             const sel = document.getElementById('select-obra');
             if(!sel.value) return alert("Selecione a obra!");
             obraAtualId = sel.value;
-            // Armazena no localStorage para uso na tela de ponto
             localStorage.setItem('obra_atual_id', obraAtualId);
             document.getElementById('nome-obra-titulo').innerText = sel.options[sel.selectedIndex].text;
             document.getElementById('selecao-obra').classList.add('hidden');
@@ -156,7 +162,6 @@
             document.getElementById('btn-trocar-obra').classList.remove('hidden');
             await carregarEquipePorObra();
             carregarPendentes();
-            carregarConfirmados();
         }
 
         async function carregarEquipePorObra() {
@@ -187,14 +192,6 @@
                 selectManual.innerHTML = '<option value="">Nenhum funcionário ativo nesta obra</option>';
                 equipeGlobal = [];
             }
-        }
-
-        function abrirTelaPonto() {
-            if (!obraAtualId) {
-                alert("Selecione uma obra primeiro!");
-                return;
-            }
-            window.open('pontoteste.html', '_blank');
         }
 
         async function carregarPendentes() {
@@ -255,18 +252,24 @@
             lucide.createIcons();
         }
 
-        async function carregarConfirmados() {
-            const container = document.getElementById('lista-confirmados');
-            container.innerHTML = '<p class="text-center p-2 text-sm font-bold text-blue-600">Carregando...</p>';
+        async function abrirModalConfirmados() {
+            document.getElementById('modal-confirmados').classList.remove('hidden');
+            const container = document.getElementById('modal-confirmados-conteudo');
+            container.innerHTML = '<p class="text-center text-slate-500">Carregando...</p>';
             
             const hoje = new Date().toISOString().split('T')[0];
             const { data, error } = await supabaseClient.from('jsp_ponto_diario')
                 .select('*').eq('obra_id', obraAtualId).eq('status', 'VALIDADO').gte('hora_registro', hoje).order('hora_registro', { ascending: true });
             
-            if (error) return container.innerHTML = `<p class="text-center text-red-500">Erro</p>`;
-            if (!data || data.length === 0) return container.innerHTML = '<p class="text-center text-slate-400 p-4 border rounded-lg bg-white">Nenhum registro confirmado hoje.</p>';
+            if (error) {
+                container.innerHTML = `<p class="text-center text-red-500">Erro ao carregar</p>`;
+                return;
+            }
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-400 p-4 border rounded-lg bg-white">Nenhum registro confirmado hoje.</p>';
+                return;
+            }
             
-            // Agrupar por funcionário
             const porFunc = {};
             data.forEach(r => {
                 if (!porFunc[r.funcionario_id]) porFunc[r.funcionario_id] = [];
@@ -280,7 +283,7 @@
                 const entradas = pontos.filter(p => p.tipo === 'ENTRADA');
                 const saidas = pontos.filter(p => p.tipo === 'SAIDA');
                 
-                let htmlFunc = `<div class="bg-white p-3 rounded-lg border border-slate-200 text-sm">`;
+                let htmlFunc = `<div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-sm">`;
                 htmlFunc += `<p class="font-bold text-slate-700">${func.nome.split(' ')[0]} (#${func.matricula})</p>`;
                 htmlFunc += `<div class="text-xs text-slate-500 mt-1 space-y-1">`;
                 entradas.forEach(e => {
@@ -294,6 +297,11 @@
                 htmlFunc += `</div></div>`;
                 container.innerHTML += htmlFunc;
             }
+            lucide.createIcons();
+        }
+
+        function fecharModalConfirmados() {
+            document.getElementById('modal-confirmados').classList.add('hidden');
         }
 
         async function validar(event, pontoId, horaOriginal, funcionarioId) {
@@ -348,7 +356,6 @@
                 }
                 
                 carregarPendentes();
-                carregarConfirmados();
             } catch (error) {
                 alert("Erro ao validar: " + error.message);
             } finally {
@@ -432,7 +439,6 @@
                 
                 fecharModalManual(); 
                 carregarPendentes();
-                carregarConfirmados();
                 alert("✅ Ponto manual salvo com sucesso!");
             } catch (error) {
                 alert("Erro: " + error.message);
