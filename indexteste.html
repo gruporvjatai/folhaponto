@@ -37,6 +37,7 @@
             <p class="text-blue-500 text-sm font-medium mt-1">Acesso ao Sistema de Obras</p>
         </div>
 
+        <!-- Tela de Login -->
         <div id="area-login" class="p-8">
             <form id="loginForm" onsubmit="fazerLogin(event)" class="space-y-5">
                 
@@ -79,22 +80,22 @@
             </form>
         </div>
 
+        <!-- Tela de Menu (após login) -->
         <div id="area-menu" class="hidden p-8 flex-col gap-4">
             <div class="text-center mb-4">
                 <h2 id="saudacao-user" class="text-lg font-black text-slate-800 uppercase">Olá!</h2>
-                <p class="text-sm font-bold text-slate-500">Selecione o módulo que deseja acessar:</p>
+                <p id="menu-subtitulo" class="text-sm font-bold text-slate-500">Selecione o módulo que deseja acessar:</p>
             </div>
 
-            <!-- Botões dinâmicos conforme nível de acesso -->
-            <div id="menu-buttons" class="flex flex-col gap-3">
-                <!-- Serão preenchidos via JavaScript -->
+            <!-- Container para botões dinâmicos ou seletor de obra -->
+            <div id="menu-container" class="flex flex-col gap-3">
+                <!-- Preenchido via JS -->
             </div>
 
             <button onclick="fazerLogout()" class="mt-4 w-full py-3 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2">
                 <i data-lucide="log-out" class="w-4 h-4"></i> Sair do Sistema
             </button>
         </div>
-
     </div>
 
     <script>
@@ -104,12 +105,15 @@
         const supabaseKey = 'sb_publishable_B2a4vA22qf4XGcrxPDRAaw_13rW51uI';
         const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        let usuarioLogado = null;
+        let obrasDisponiveis = [];
+
         // Verifica se já está logado ao carregar a página
         window.onload = () => {
             const userStorage = localStorage.getItem('rv_user');
             if(userStorage) {
-                const user = JSON.parse(userStorage);
-                mostrarMenu(user.nome, user.nivel);
+                usuarioLogado = JSON.parse(userStorage);
+                mostrarMenu(usuarioLogado.nome, usuarioLogado.nivel);
             }
         };
 
@@ -140,12 +144,12 @@
                     throw new Error("Credenciais inválidas");
                 }
 
-                // Salva na sessão
-                localStorage.setItem('rv_user', JSON.stringify({
+                usuarioLogado = {
                     id: data.id,
                     nome: data.nome,
-                    nivel: data.nivel_acesso  // "admin", "comprador", "registros"
-                }));
+                    nivel: data.nivel_acesso
+                };
+                localStorage.setItem('rv_user', JSON.stringify(usuarioLogado));
 
                 mostrarMenu(data.nome, data.nivel_acesso);
 
@@ -157,30 +161,41 @@
             }
         }
 
-        function mostrarMenu(nomeUsuario, nivel) {
+        async function mostrarMenu(nomeUsuario, nivel) {
             document.getElementById('area-login').classList.add('hidden');
             
             const primeiroNome = nomeUsuario.split(' ')[0];
             document.getElementById('saudacao-user').innerText = `Olá, ${primeiroNome}!`;
 
-            const menuContainer = document.getElementById('menu-buttons');
+            const menuContainer = document.getElementById('menu-container');
+            const subTitulo = document.getElementById('menu-subtitulo');
             menuContainer.innerHTML = '';
 
             if (nivel === 'registros') {
-                // Apenas botão de Presenças Diárias
-                menuContainer.innerHTML = `
-                    <button onclick="window.location.href='pontoteste.html'" class="w-full p-4 bg-blue-50 border-2 border-blue-200 hover:bg-blue-600 hover:border-blue-600 hover:text-white text-blue-800 rounded-xl font-bold transition-all flex items-center gap-4 group shadow-sm">
-                        <div class="bg-white p-2 rounded-lg group-hover:bg-blue-500 transition-colors">
-                            <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+                subTitulo.innerText = 'Selecione a obra para registrar presenças:';
+                
+                // Carrega obras
+                const { data: obras, error } = await sb.from('jsp_obras').select('id, nome').order('nome');
+                if (error) {
+                    menuContainer.innerHTML = '<p class="text-red-500 text-center">Erro ao carregar obras.</p>';
+                } else {
+                    obrasDisponiveis = obras || [];
+                    let options = '<option value="">-- Selecione a obra --</option>';
+                    obrasDisponiveis.forEach(o => options += `<option value="${o.id}">${o.nome}</option>`);
+                    
+                    menuContainer.innerHTML = `
+                        <div class="space-y-4">
+                            <select id="select-obra-registro" class="w-full p-4 border-2 rounded-lg text-center font-bold outline-none bg-slate-50 text-lg">
+                                ${options}
+                            </select>
+                            <button onclick="acessarPontoRegistro()" class="w-full p-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg">
+                                <i data-lucide="clipboard-list" class="w-5 h-5"></i> Acessar Presenças
+                            </button>
                         </div>
-                        <div class="text-left">
-                            <span class="block text-base">Presenças Diárias</span>
-                            <span class="block text-[11px] opacity-80 uppercase tracking-wider font-semibold">Registro de Ponto</span>
-                        </div>
-                        <i data-lucide="chevron-right" class="w-5 h-5 ml-auto opacity-50"></i>
-                    </button>
-                `;
+                    `;
+                }
             } else {
+                subTitulo.innerText = 'Selecione o módulo que deseja acessar:';
                 // Menu completo (admin / comprador)
                 menuContainer.innerHTML = `
                     <button onclick="window.location.href='encarregadoteste.html'" class="w-full p-4 bg-indigo-50 border-2 border-indigo-200 hover:bg-indigo-600 hover:border-indigo-600 hover:text-white text-indigo-800 rounded-xl font-bold transition-all flex items-center gap-4 group shadow-sm">
@@ -212,9 +227,27 @@
             lucide.createIcons();
         }
 
+        // Função exclusiva para nível "registros"
+        window.acessarPontoRegistro = function() {
+            const select = document.getElementById('select-obra-registro');
+            if (!select || !select.value) {
+                alert('Selecione uma obra!');
+                return;
+            }
+            const obraId = select.value;
+            const obraNome = select.options[select.selectedIndex].text;
+            
+            // Salva a obra selecionada no localStorage para uso no ponto.html
+            localStorage.setItem('obra_atual_id', obraId);
+            localStorage.setItem('obra_atual_nome', obraNome);
+            
+            // Redireciona para a tela de ponto
+            window.location.href = 'pontoteste.html';
+        };
+
         function fazerLogout() {
             localStorage.removeItem('rv_user');
-            // Não remover obra_atual_id, pois o dispositivo pode ser compartilhado
+            // Não remove obra_atual_id para não quebrar possível uso futuro
             document.getElementById('login_user').value = '';
             document.getElementById('senha').value = '';
             
